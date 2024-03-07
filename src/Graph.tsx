@@ -1,60 +1,89 @@
+
 import React, { Component } from 'react';
-import { Table } from '@finos/perspective';
-import { ServerRespond } from './DataStreamer';
-import { DataManipulator } from './DataManipulator';
-import './Graph.css';
+import { BpkCode } from 'bpk-component-code';
+import BpkButton from 'bpk-component-button';
+import BpkText from 'bpk-component-text';
+import BpkCalendar, { CALENDAR_SELECTION_TYPE } from 'bpk-component-calendar';
+import format from 'date-fns/format';
+import STYLES from './App.scss';
 
-interface IProps {
-  data: ServerRespond[],
-}
+const c = className => STYLES[className] || 'UNKNOWN';
 
-interface PerspectiveViewerElement extends HTMLElement {
-  load: (table: Table) => void,
-}
-class Graph extends Component<IProps, {}> {
-  table: Table | undefined;
+const formatDateFull = date => {
+  if (!date || typeof date !== 'object') {
+    throw new Error('Invalid date provided to formatDateFull');
+  }
+  return format(date, 'EEEE, do MMMM yyyy');
+};
+
+const formatMonth = date => {
+  if (!date || typeof date !== 'object') {
+    throw new Error('Invalid date provided to formatMonth');
+  }
+  return format(date, 'MMMM yyyy');
+};
+
+const daysOfWeek = [
+  { name: 'Sunday', nameAbbr: 'Sun', index: 0, isWeekend: true },
+  { name: 'Monday', nameAbbr: 'Mon', index: 1, isWeekend: false },
+  { name: 'Tuesday', nameAbbr: 'Tues', index: 2, isWeekend: false },
+  { name: 'Wednesday', nameAbbr: 'Wed', index: 3, isWeekend: false },
+  { name: 'Thursday', nameAbbr: 'Thur', index: 4, isWeekend: false },
+  { name: 'Friday', nameAbbr: 'Fri', index: 5, isWeekend: false },
+  { name: 'Saturday', nameAbbr: 'Sat', index: 6, isWeekend: true },
+];
+
+export default class App extends Component {
+  constructor() {
+    super();
+    this.state = {
+      selectionConfiguration: {
+        type: CALENDAR_SELECTION_TYPE.single,
+        date: null,
+      },
+    };
+  }
+
+  handleDateSelect = date => {
+    if (!date || typeof date !== 'object') {
+      throw new Error('Invalid date provided to handleDateSelect');
+    }
+    this.setState({
+      selectionConfiguration: {
+        type: CALENDAR_SELECTION_TYPE.single,
+        date: date,
+      },
+    });
+  };
 
   render() {
-    return React.createElement('perspective-viewer');
-  }
-
-  componentDidMount() {
-    // Get element from the DOM.
-    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
-
-    const schema = {
-      stock: 'string',
-      top_ask_price: 'float',
-      top_bid_price: 'float',
-      timestamp: 'date',
-    };
-
-    if (window.perspective && window.perspective.worker()) {
-      this.table = window.perspective.worker().table(schema);
-    }
-    if (this.table) {
-      // Load the `table` in the `<perspective-viewer>` DOM reference.
-      elem.load(this.table);
-      elem.setAttribute('view', 'y_line');
-      elem.setAttribute('column-pivots', '["stock"]');
-      elem.setAttribute('row-pivots', '["timestamp"]');
-      elem.setAttribute('columns', '["top_ask_price"]');
-      elem.setAttribute('aggregates', JSON.stringify({
-        stock: 'distinctcount',
-        top_ask_price: 'avg',
-        top_bid_price: 'avg',
-        timestamp: 'distinct count',
-      }));
-    }
-  }
-
-  componentDidUpdate() {
-    if (this.table) {
-      this.table.update(
-        DataManipulator.generateRow(this.props.data),
-      );
-    }
+    return (
+      <div className={c('App')}>
+        <header className={c('App__header')}>
+          <div className={c('App__header-inner')}>
+            <BpkText tagName="h1" textStyle="xxl" className={c('App__heading')}>
+              Reservation Date
+            </BpkText>
+          </div>
+        </header>
+        <main className={c('App__main')}>
+          <div>
+            <BpkCalendar
+              id="calendar"
+              onDateSelect={this.handleDateSelect}
+              formatMonth={formatMonth}
+              formatDateFull={formatDateFull}
+              daysOfWeek={daysOfWeek}
+              weekStartsOn={0}
+              changeMonthLabel="Change month"
+              nextMonthLabel="Next month"
+              previousMonthLabel="Previous month"
+              selectionConfiguration={this.state.selectionConfiguration}
+            />
+          </div>
+          <BpkButton onClick={() => alert('It works!')}>Continue</BpkButton>
+        </main>
+      </div>
+    );
   }
 }
-
-export default Graph;
